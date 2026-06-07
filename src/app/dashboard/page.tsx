@@ -14,7 +14,7 @@ export default function Page() {
 				</div>
 			</section>
 
-			<section className="grid min-h-0 grid-rows-[minmax(0,1fr)_18rem] gap-2 overflow-hidden">
+			<section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-2 overflow-hidden">
 				<div className="min-h-0 overflow-hidden rounded-lg border border-zinc-800">
 					<Map />
 				</div>
