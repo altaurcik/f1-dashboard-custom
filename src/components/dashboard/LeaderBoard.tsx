@@ -8,7 +8,11 @@ import { sortPos } from "@/lib/sorting";
 
 import Driver from "@/components/driver/Driver";
 
-export default function LeaderBoard() {
+type Props = {
+	forceCompactSectors?: boolean;
+};
+
+export default function LeaderBoard({ forceCompactSectors = false }: Props) {
 	const drivers = useDataStore(({ state }) => state?.DriverList);
 	const driversTiming = useDataStore(({ state }) => state?.TimingData);
 
@@ -32,6 +36,7 @@ export default function LeaderBoard() {
 									position={index + 1}
 									driver={drivers[timingDriver.RacingNumber]}
 									timingDriver={timingDriver}
+									forceCompactSectors={forceCompactSectors}
 								/>
 							))}
 					</AnimatePresence>

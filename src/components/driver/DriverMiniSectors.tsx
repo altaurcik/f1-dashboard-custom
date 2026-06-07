@@ -6,17 +6,19 @@ import { useSettingsStore } from "@/stores/useSettingsStore";
 type Props = {
 	sectors: TimingDataDriver["Sectors"];
 	bestSectors: TimingStatsDriver["BestSectors"] | undefined;
+	forceCompact?: boolean;
 };
 
-export default function DriverMiniSectors({ sectors = [], bestSectors }: Props) {
+export default function DriverMiniSectors({ sectors = [], bestSectors, forceCompact = false }: Props) {
 	const showMiniSectors = useSettingsStore((state) => state.showMiniSectors);
 	const showBestSectors = useSettingsStore((state) => state.showBestSectors);
+	const showMiniSectorBars = showMiniSectors && !forceCompact;
 
 	return (
 		<div className="flex gap-2">
 			{sectors.map((sector, i) => (
 				<div key={`sector.${i}`} className="flex flex-col gap-1">
-					{showMiniSectors && (
+					{showMiniSectorBars && (
 						<div className="flex flex-row gap-1">
 							{sector.Segments.map((segment, j) => (
 								<MiniSector status={segment.Status} key={`sector.mini.${j}`} />
@@ -24,7 +26,7 @@ export default function DriverMiniSectors({ sectors = [], bestSectors }: Props) 
 						</div>
 					)}
 
-					<div className={clsx("flex", showMiniSectors ? "items-center gap-1" : "flex-col")}>
+					<div className={clsx("flex", showMiniSectorBars ? "items-center gap-1" : "flex-col")}>
 						<p
 							className={clsx("text-lg leading-none font-medium tabular-nums", {
 								"text-violet-600!": sector.OverallFastest,

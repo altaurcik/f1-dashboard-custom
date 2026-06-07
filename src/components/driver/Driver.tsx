@@ -21,6 +21,7 @@ type Props = {
 	position: number;
 	driver: Driver;
 	timingDriver: TimingDataDriver;
+	forceCompactSectors?: boolean;
 };
 
 const hasDRS = (drs: number) => drs > 9;
@@ -39,7 +40,7 @@ const inDangerZone = (position: number, sessionPart: number) => {
 	}
 };
 
-export default function Driver({ driver, timingDriver, position }: Props) {
+export default function Driver({ driver, timingDriver, position, forceCompactSectors = false }: Props) {
 	const sessionPart = useDataStore((state) => state.state?.TimingData?.SessionPart);
 	const timingStatsDriver = useDataStore((state) => state.state?.TimingStats?.Lines[driver.RacingNumber]);
 	const appTimingDriver = useDataStore((state) => state.state?.TimingAppData?.Lines[driver.RacingNumber]);
@@ -80,7 +81,11 @@ export default function Driver({ driver, timingDriver, position }: Props) {
 				<DriverInfo timingDriver={timingDriver} gridPos={appTimingDriver ? parseInt(appTimingDriver.GridPos) : 0} />
 				<DriverGap timingDriver={timingDriver} sessionPart={sessionPart} />
 				<DriverLapTime last={timingDriver.LastLapTime} best={timingDriver.BestLapTime} hasFastest={hasFastest} />
-				<DriverMiniSectors sectors={timingDriver.Sectors} bestSectors={timingStatsDriver?.BestSectors} />
+				<DriverMiniSectors
+					sectors={timingDriver.Sectors}
+					bestSectors={timingStatsDriver?.BestSectors}
+					forceCompact={forceCompactSectors}
+				/>
 
 				{carMetrics && carData && <DriverCarMetrics carData={carData} />}
 			</div>
