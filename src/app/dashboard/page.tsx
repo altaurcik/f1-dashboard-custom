@@ -10,7 +10,7 @@ import Map from "@/components/dashboard/Map";
 export default function Page() {
 	const gridRef = useRef<HTMLDivElement>(null);
 	const fullLeaderBoardMeasureRef = useRef<HTMLDivElement>(null);
-	const [needsLeaderBoardMinimum, setNeedsLeaderBoardMinimum] = useState(false);
+	const [needsCompactSectors, setNeedsCompactSectors] = useState(false);
 
 	const measureLeaderBoard = useCallback(() => {
 		const grid = gridRef.current;
@@ -22,9 +22,9 @@ export default function Page() {
 
 		const halfGridWidth = grid.clientWidth / 2;
 		const fullLeaderBoardWidth = fullLeaderBoardMeasure.scrollWidth;
-		const shouldReserveHalf = fullLeaderBoardWidth > halfGridWidth;
+		const shouldCompactSectors = fullLeaderBoardWidth > halfGridWidth;
 
-		setNeedsLeaderBoardMinimum(shouldReserveHalf);
+		setNeedsCompactSectors(shouldCompactSectors);
 	}, []);
 
 	useEffect(() => {
@@ -48,9 +48,7 @@ export default function Page() {
 			ref={gridRef}
 			className="relative grid h-full min-h-0 w-full gap-2 overflow-hidden"
 			style={{
-				gridTemplateColumns: needsLeaderBoardMinimum
-					? "minmax(50%, max-content) minmax(0, 1fr)"
-					: "max-content minmax(0, 1fr)",
+				gridTemplateColumns: "fit-content(50%) minmax(0, 1fr)",
 			}}
 		>
 			<div
@@ -63,7 +61,7 @@ export default function Page() {
 
 			<section className="min-h-0 overflow-hidden rounded-lg border border-zinc-800 p-2">
 				<div className="h-full min-h-0 overflow-hidden">
-					<LeaderBoard forceCompactSectors={needsLeaderBoardMinimum} />
+					<LeaderBoard forceCompactSectors={needsCompactSectors} />
 				</div>
 			</section>
 
