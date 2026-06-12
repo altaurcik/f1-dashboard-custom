@@ -2530,9 +2530,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"f1-dash@workspace:.":
+"f1-dashboard-custom@workspace:.":
   version: 0.0.0-use.local
-  resolution: "f1-dash@workspace:."
+  resolution: "f1-dashboard-custom@workspace:."
   dependencies:
     "@headlessui/react": "npm:2.2.10"
     "@tailwindcss/postcss": "npm:4.3.0"

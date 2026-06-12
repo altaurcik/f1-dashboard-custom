@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { utc } from "moment";
 import clsx from "clsx";
@@ -11,7 +11,6 @@ import { toTrackTime } from "@/lib/toTrackTime";
 
 import DriverTag from "@/components/driver/DriverTag";
 import PlayControls from "@/components/ui/PlayControls";
-import Progress from "@/components/ui/Progress";
 
 type Props = {
 	driver: Driver;
@@ -20,31 +19,41 @@ type Props = {
 	gmtOffset: string;
 };
 
+let transcriptQueue = Promise.resolve();
+
+function enqueueTranscript<T>(task: () => Promise<T>): Promise<T> {
+	const result = transcriptQueue.then(task, task);
+	transcriptQueue = result.then(
+		() => undefined,
+		() => undefined,
+	);
+	return result;
+}
+
 export default function RadioMessage({ driver, capture, basePath, gmtOffset }: Props) {
 	const audioRef = useRef<HTMLAudioElement | null>(null);
-	const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
 	const [playing, setPlaying] = useState<boolean>(false);
-	const [duration, setDuration] = useState<number>(10);
-	const [progress, setProgress] = useState<number>(0);
+	const [transcript, setTranscript] = useState<string>("Queued for transcription...");
+	const [transcriptError, setTranscriptError] = useState<string | null>(null);
 
-	const loadMeta = () => {
-		if (!audioRef.current) return;
-		setDuration(audioRef.current.duration);
-	};
+	const audioUrl = `${basePath}${capture.Path}`;
 
 	const onEnded = () => {
 		setPlaying(false);
-		setProgress(0);
-
-		if (intervalRef.current) {
-			clearInterval(intervalRef.current);
-		}
+		resetPlayback();
 	};
 
-	const updateProgress = () => {
-		if (!audioRef.current) return;
-		setProgress(audioRef.current.currentTime);
+	const resetPlayback = () => {
+		const audio = audioRef.current;
+		if (!audio) return;
+
+		if (typeof audio.fastSeek === "function") {
+			audio.fastSeek(0);
+			return;
+		}
+
+		audio.currentTime = 0;
 	};
 
 	const togglePlayback = () => {
@@ -53,23 +62,59 @@ export default function RadioMessage({ driver, capture, basePath, gmtOffset }: P
 
 			if (!old) {
 				audioRef.current.play();
-				intervalRef.current = setInterval(updateProgress, 10);
 			} else {
 				audioRef.current.pause();
 
-				if (intervalRef.current) {
-					clearInterval(intervalRef.current);
-				}
-
 				setTimeout(() => {
-					setProgress(0);
-					audioRef.current?.fastSeek(0);
+					resetPlayback();
 				}, 10000);
 			}
 
 			return !old;
 		});
 	};
+
+	useEffect(() => {
+		let cancelled = false;
+
+		setTranscript("Queued for transcription...");
+		setTranscriptError(null);
+
+		enqueueTranscript(async () => {
+			if (cancelled) return;
+
+			setTranscript("Transcribing...");
+
+			const response = await fetch("/api/radio-transcript", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ audioUrl }),
+			});
+
+			const data = (await response.json()) as { text?: string; error?: string };
+
+			if (!response.ok) {
+				throw new Error(data.error ?? "Transcription failed.");
+			}
+
+			if (!cancelled) {
+				setTranscript(data.text?.trim() || "No speech detected.");
+			}
+		}).catch((error: unknown) => {
+			console.error(error);
+
+			if (!cancelled) {
+				const message = error instanceof Error ? error.message : "Transcript unavailable.";
+				setTranscriptError(message.includes("HF_TOKEN") ? "HF_TOKEN required for speaker diarization." : message);
+			}
+		});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [audioUrl]);
 
 	const favoriteDriver = useSettingsStore((state) => state.favoriteDrivers.includes(driver.RacingNumber));
 
@@ -80,9 +125,9 @@ export default function RadioMessage({ driver, capture, basePath, gmtOffset }: P
 		<motion.li
 			animate={{ opacity: 1, scale: 1 }}
 			initial={{ opacity: 0, scale: 0.9 }}
-			className={clsx("flex flex-col gap-1 rounded-lg p-2", { "bg-sky-800/30": favoriteDriver })}
+			className={clsx("flex flex-col gap-0.5 rounded-md p-1.5", { "bg-sky-800/30": favoriteDriver })}
 		>
-			<div className="flex items-center gap-1 text-sm leading-none text-zinc-500">
+			<div className="flex items-center gap-1 text-[11px] leading-none text-zinc-500">
 				<time dateTime={localTime}>{localTime}</time>
 				{"·"}
 				<time className="text-zinc-700" dateTime={trackTime}>
@@ -90,18 +135,19 @@ export default function RadioMessage({ driver, capture, basePath, gmtOffset }: P
 				</time>
 			</div>
 
-			<div className="flex items-center gap-1">
-				<DriverTag className="!w-fit" teamColor={driver.TeamColour} short={driver.Tla} />
+			<div className="flex items-start gap-1">
+				<DriverTag className="!w-fit !rounded-md !px-0.5 !py-0.5 text-xs" teamColor={driver.TeamColour} short={driver.Tla} />
 
-				<PlayControls playing={playing} onClick={togglePlayback} />
-				<Progress duration={duration} progress={progress} />
+				<PlayControls className="h-6! w-6! shrink-0" playing={playing} onClick={togglePlayback} />
+				<p className="min-w-0 flex-1 whitespace-pre-line text-[11px] leading-snug text-zinc-300">
+					{transcriptError ?? transcript}
+				</p>
 
 				<audio
 					preload="none"
 					src={`${basePath}${capture.Path}`}
 					ref={audioRef}
 					onEnded={() => onEnded()}
-					onLoadedMetadata={() => loadMeta()}
 				/>
 			</div>
 		</motion.li>

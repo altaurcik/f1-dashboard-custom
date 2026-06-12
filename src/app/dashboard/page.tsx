@@ -9,22 +9,32 @@ import Map from "@/components/dashboard/Map";
 
 export default function Page() {
 	const gridRef = useRef<HTMLDivElement>(null);
+	const leaderBoardViewportRef = useRef<HTMLDivElement>(null);
 	const fullLeaderBoardMeasureRef = useRef<HTMLDivElement>(null);
 	const [needsCompactSectors, setNeedsCompactSectors] = useState(false);
+	const [leaderBoardScale, setLeaderBoardScale] = useState(1);
 
 	const measureLeaderBoard = useCallback(() => {
 		const grid = gridRef.current;
+		const leaderBoardViewport = leaderBoardViewportRef.current;
 		const fullLeaderBoardMeasure = fullLeaderBoardMeasureRef.current;
 
-		if (!grid || !fullLeaderBoardMeasure) {
+		if (!grid || !leaderBoardViewport || !fullLeaderBoardMeasure) {
 			return;
 		}
 
 		const halfGridWidth = grid.clientWidth / 2;
 		const fullLeaderBoardWidth = fullLeaderBoardMeasure.scrollWidth;
 		const shouldCompactSectors = fullLeaderBoardWidth > halfGridWidth;
+		const fullLeaderBoardHeight = fullLeaderBoardMeasure.scrollHeight;
+		const availableLeaderBoardHeight = leaderBoardViewport.clientHeight;
+		const nextLeaderBoardScale =
+			fullLeaderBoardHeight > 0 && availableLeaderBoardHeight > 0
+				? Math.min(1, availableLeaderBoardHeight / fullLeaderBoardHeight)
+				: 1;
 
 		setNeedsCompactSectors(shouldCompactSectors);
+		setLeaderBoardScale(Number(nextLeaderBoardScale.toFixed(3)));
 	}, []);
 
 	useEffect(() => {
@@ -34,6 +44,10 @@ export default function Page() {
 
 		if (gridRef.current) {
 			resizeObserver.observe(gridRef.current);
+		}
+
+		if (leaderBoardViewportRef.current) {
+			resizeObserver.observe(leaderBoardViewportRef.current);
 		}
 
 		if (fullLeaderBoardMeasureRef.current) {
@@ -60,8 +74,15 @@ export default function Page() {
 			</div>
 
 			<section className="min-h-0 overflow-hidden rounded-lg border border-zinc-800 p-2">
-				<div className="h-full min-h-0 overflow-hidden">
-					<LeaderBoard forceCompactSectors={needsCompactSectors} />
+				<div ref={leaderBoardViewportRef} className="h-full min-h-0 overflow-hidden">
+					<div
+						className="origin-top-left"
+						style={{
+							transform: `scale(${leaderBoardScale})`,
+						}}
+					>
+						<LeaderBoard forceCompactSectors={needsCompactSectors} />
+					</div>
 				</div>
 			</section>
 
