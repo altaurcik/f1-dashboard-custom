@@ -12,23 +12,22 @@ type Props = {
 export default function DriverMiniSectors({ sectors = [], bestSectors, forceCompact = false }: Props) {
 	const showMiniSectors = useSettingsStore((state) => state.showMiniSectors);
 	const showBestSectors = useSettingsStore((state) => state.showBestSectors);
-	const showMiniSectorBars = showMiniSectors && !forceCompact;
 
 	return (
-		<div className="flex gap-2">
+		<div className={clsx("flex", forceCompact ? "gap-1" : "gap-2")}>
 			{sectors.map((sector, i) => (
-				<div key={`sector.${i}`} className="flex flex-col gap-1">
-					{showMiniSectorBars && (
-						<div className="flex flex-row gap-1">
+				<div key={`sector.${i}`} className={clsx("flex flex-col", forceCompact ? "gap-0.5" : "gap-1")}>
+					{showMiniSectors && (
+						<div className={clsx("flex flex-row", forceCompact ? "gap-px" : "gap-1")}>
 							{sector.Segments.map((segment, j) => (
-								<MiniSector status={segment.Status} key={`sector.mini.${j}`} />
+								<MiniSector status={segment.Status} compact={forceCompact} key={`sector.mini.${j}`} />
 							))}
 						</div>
 					)}
 
-					<div className={clsx("flex", showMiniSectorBars ? "items-center gap-1" : "flex-col")}>
+					<div className={clsx("flex", showMiniSectors ? "items-center gap-1" : "flex-col")}>
 						<p
-							className={clsx("text-lg leading-none font-medium tabular-nums", {
+							className={clsx(forceCompact ? "text-sm" : "text-lg", "leading-none font-medium tabular-nums", {
 								"text-violet-600!": sector.OverallFastest,
 								"text-emerald-500!": sector.PersonalFastest,
 								"text-zinc-500": !sector.Value,
@@ -39,7 +38,7 @@ export default function DriverMiniSectors({ sectors = [], bestSectors, forceComp
 
 						{showBestSectors && (
 							<p
-								className={clsx("text-sm leading-none text-zinc-500 tabular-nums", {
+								className={clsx(forceCompact ? "text-xs" : "text-sm", "leading-none text-zinc-500 tabular-nums", {
 									"text-violet-600!": bestSectors?.[i].Position === 1,
 								})}
 							>
@@ -53,10 +52,10 @@ export default function DriverMiniSectors({ sectors = [], bestSectors, forceComp
 	);
 }
 
-function MiniSector({ status }: { status: number }) {
+function MiniSector({ status, compact }: { status: number; compact: boolean }) {
 	return (
 		<div
-			style={{ width: 10, height: 5, borderRadius: 2 }}
+			style={{ width: compact ? 5 : 10, height: compact ? 3 : 5, borderRadius: compact ? 1 : 2 }}
 			className={clsx({
 				"bg-amber-400": status === 2048 || status === 2052, // TODO unsure
 				"bg-emerald-500": status === 2049,

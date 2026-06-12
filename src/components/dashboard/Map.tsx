@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import clsx from "clsx";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { PositionCar, TimingDataDriver } from "@/types/state.type";
 import type { Map, TrackPosition } from "@/types/map.type";
@@ -112,7 +111,7 @@ export default function Map({ filter }: Props) {
 	const showCornerNumbers = useSettingsStore((state) => state.showCornerNumbers);
 	const favoriteDrivers = useSettingsStore((state) => state.favoriteDrivers);
 
-	// const positions = useDataStore((state) => state.positions);
+	const positions = useDataStore((state) => state.positions);
 	const drivers = useDataStore((state) => state?.state?.DriverList);
 	const trackStatus = useDataStore((state) => state?.state?.TrackStatus);
 	const timingDrivers = useDataStore((state) => state?.state?.TimingData);
@@ -286,7 +285,8 @@ export default function Map({ filter }: Props) {
 								: false;
 							const pit = timingDriver ? timingDriver.InPit : false;
 
-							const driverPosition = getDriverPosition(timingDriver, originalTrackPoints);
+							const livePosition = positions?.[driver.RacingNumber];
+							const driverPosition = livePosition ?? getDriverPosition(timingDriver, originalTrackPoints);
 
 							// Skip rendering if we can't determine position
 							if (!driverPosition) return null;
@@ -303,6 +303,7 @@ export default function Map({ filter }: Props) {
 									rotation={rotation}
 									centerX={centerX}
 									centerY={centerY}
+									transitionDuration={livePosition ? 0.1 : 0.9}
 								/>
 							);
 						})}
@@ -339,18 +340,80 @@ type CarDotProps = {
 
 	centerX: number;
 	centerY: number;
+	transitionDuration: number;
 };
 
-const CarDot = ({ pos, name, color, favoriteDriver, pit, hidden, rotation, centerX, centerY }: CarDotProps) => {
+function useSmoothedPoint(target: TrackPosition, durationSeconds: number): TrackPosition {
+	const [point, setPoint] = useState(target);
+	const pointRef = useRef(target);
+	const frameRef = useRef<number | null>(null);
+
+	useEffect(() => {
+		if (frameRef.current !== null) {
+			cancelAnimationFrame(frameRef.current);
+		}
+
+		const from = pointRef.current;
+		const to = target;
+		const durationMs = Math.max(0, durationSeconds * 1000);
+		const startedAt = performance.now();
+
+		if (durationMs === 0) {
+			pointRef.current = to;
+			setPoint(to);
+			return;
+		}
+
+		const tick = (now: number) => {
+			const progress = Math.min(1, (now - startedAt) / durationMs);
+			const next = {
+				x: from.x + (to.x - from.x) * progress,
+				y: from.y + (to.y - from.y) * progress,
+			};
+
+			pointRef.current = next;
+			setPoint(next);
+
+			if (progress < 1) {
+				frameRef.current = requestAnimationFrame(tick);
+			}
+		};
+
+		frameRef.current = requestAnimationFrame(tick);
+
+		return () => {
+			if (frameRef.current !== null) {
+				cancelAnimationFrame(frameRef.current);
+				frameRef.current = null;
+			}
+		};
+	}, [target.x, target.y, durationSeconds]);
+
+	return point;
+}
+
+const CarDot = ({
+	pos,
+	name,
+	color,
+	favoriteDriver,
+	pit,
+	hidden,
+	rotation,
+	centerX,
+	centerY,
+	transitionDuration,
+}: CarDotProps) => {
 	const rotatedPos = rotate(pos.X, pos.Y, rotation, centerX, centerY);
-	const transform = [`translateX(${rotatedPos.x}px)`, `translateY(${rotatedPos.y}px)`].join(" ");
+	const smoothedPos = useSmoothedPoint(rotatedPos, transitionDuration);
+	const opacity = hidden ? 0 : pit ? 0.3 : 1;
 
 	return (
 		<g
-			className={clsx("fill-zinc-700", { "opacity-30": pit }, { "opacity-0!": hidden })}
+			transform={`translate(${smoothedPos.x} ${smoothedPos.y})`}
+			opacity={opacity}
+			className="fill-zinc-700"
 			style={{
-				transition: "all 1s linear",
-				transform,
 				...(color && { fill: `#${color}` }),
 			}}
 		>
@@ -373,7 +436,6 @@ const CarDot = ({ pos, name, color, favoriteDriver, pit, hidden, rotation, cente
 					r={180}
 					fill="transparent"
 					strokeWidth={40}
-					style={{ transition: "all 1s linear" }}
 				/>
 			)}
 		</g>

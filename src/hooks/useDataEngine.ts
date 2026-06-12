@@ -13,7 +13,7 @@ import { useSettingsStore } from "@/stores/useSettingsStore";
 import { useBuffer } from "@/hooks/useBuffer";
 import { useStatefulBuffer } from "@/hooks/useStatefulBuffer";
 
-const UPDATE_MS = 200;
+const UPDATE_MS = 100;
 
 type Props = {
 	updateState: (state: State) => void;

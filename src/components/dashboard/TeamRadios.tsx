@@ -22,6 +22,10 @@ export default function TeamRadios() {
 
 			{teamRadios && gmtOffset && drivers && teamRadios.Captures && (
 				<AnimatePresence>
+					{teamRadios.Captures.length < 1 && (
+						<li className="rounded-md p-1.5 text-xs text-zinc-500">No team radio messages yet.</li>
+					)}
+
 					{teamRadios.Captures.sort(sortUtc)
 						.slice(0, 5)
 						.map((teamRadio, i) => (
