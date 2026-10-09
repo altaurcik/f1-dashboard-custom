@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { emptyComparisonHistory, type ComparisonHistory } from "@/lib/driverComparison";
 
 import type { CarsData, Positions, State } from "@/types/state.type";
 
@@ -8,6 +9,8 @@ type DataStore = {
 	state: State | null;
 	carsData: CarsData | null;
 	positions: Positions | null;
+	comparison: ComparisonHistory;
+	setComparison: (comparison: ComparisonHistory) => void;
 
 	setState: (state: Partial<State> | null) => void;
 	setCarsData: (carsData: CarsData | null) => void;
@@ -18,6 +21,8 @@ export const useDataStore = create<DataStore>((set) => ({
 	state: null,
 	carsData: null,
 	positions: null,
+	comparison: emptyComparisonHistory(),
+	setComparison: (comparison) => set({ comparison }),
 
 	setState: (partialState: Partial<State> | null) =>
 		set((prev) => ({

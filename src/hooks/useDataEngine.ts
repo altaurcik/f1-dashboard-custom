@@ -1,9 +1,10 @@
 "use client";
+import { advanceComparison, emptyComparisonHistory, type ComparisonHistory } from "@/lib/driverComparison";
 
 import { useEffect, useRef, useState } from "react";
 
 import type { CarData, CarsData, Position, Positions, State } from "@/types/state.type";
-import type { MessageInitial, MessageUpdate } from "@/types/message.type";
+import type { MessageInitial, MessageUpdate, RecursivePartial } from "@/types/message.type";
 
 import { inflate } from "@/lib/inflate";
 import { ingestPositionFrames, resetPositionTimeline } from "@/lib/positionTimeline";
@@ -17,12 +18,13 @@ import { useStatefulBuffer } from "@/hooks/useStatefulBuffer";
 const UPDATE_MS = 100;
 
 type Props = {
+	updateComparison: (history: ComparisonHistory) => void;
 	updateState: (state: State) => void;
 	updatePosition: (pos: Positions) => void;
 	updateCarData: (car: CarsData) => void;
 };
 
-export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Props) => {
+export const useDataEngine = ({ updateState, updatePosition, updateCarData, updateComparison }: Props) => {
 	const buffers = {
 		ExtrapolatedClock: useStatefulBuffer(),
 		TopThree: useStatefulBuffer(),
@@ -39,6 +41,20 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 		TimingData: useStatefulBuffer(),
 		TeamRadio: useStatefulBuffer(),
 		ChampionshipPrediction: useStatefulBuffer(),
+	};
+
+	const comparisonBuffer = useBuffer<ComparisonHistory>();
+	const comparisonRef = useRef(emptyComparisonHistory());
+	const collectComparison = (patch: RecursivePartial<State>, initial = false) => {
+		const snapshot = Object.fromEntries(
+			Object.entries(buffers).map(([key, buffer]) => [key, buffer.latest()]),
+		) as State;
+		const next = advanceComparison(comparisonRef.current, snapshot, patch, Date.now(), initial);
+		if (next !== comparisonRef.current) {
+			comparisonRef.current = next;
+			comparisonBuffer.push(next);
+		}
+		if (initial) updateComparison(next);
 	};
 
 	const carBuffer = useBuffer<CarsData>();
@@ -70,6 +86,8 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 			if (data) buffer.push(data);
 		});
 
+		collectComparison(initial, true);
+
 		if (carZ) {
 			const carData = inflate<CarData>(carZ);
 			if (carData.Entries[0]) updateCarData(carData.Entries[0].Cars);
@@ -96,6 +114,8 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 			const buffer = buffers[key as keyof typeof buffers];
 			if (data) buffer.push(data);
 		});
+
+		collectComparison(update);
 
 		if (carZ) {
 			const carData = inflate<CarData>(carZ);
@@ -159,6 +179,12 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 				setTimeout(() => posBuffer.cleanup(delayedTimestamp), 0);
 			}
 		}
+
+		const comparisonAt = Date.now() - delay * 1000;
+		const comparison = delay === 0 ? comparisonBuffer.latest() : comparisonBuffer.delayed(comparisonAt);
+		updateComparison(comparison ?? emptyComparisonHistory());
+		// Preserve the full supported TV Sync window, including delays added after opening.
+		comparisonBuffer.cleanup(comparisonAt - 300_000);
 
 		const maxDelay = Math.min(
 			...Object.values(buffers)

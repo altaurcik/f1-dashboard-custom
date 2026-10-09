@@ -4,12 +4,16 @@ Local Formula 1 Live Timing dashboard. The main view is rebuilt around the layou
 of [Formula 1 Dashboard](https://app.formula1dashboard.com/live-timing/), without its left navigation sidebar.
 
 - Timing and Stints tables, including gaps, intervals, mini-sectors, tyre age and stint history.
-- Linked selection of up to two drivers for telemetry and map cameras.
+- Linked selection of two drivers for pace comparison and map cameras.
 - Smooth real positional data with a two-second presentation buffer; 2D and geographic 3D maps.
-- Session best, previous edition, race lap record and overall track record.
+- Driver comparison: timing gap, closing trend, recent 3/5/10 laps and a conditional catch estimate.
 - Race Control cards, filters, counters, notifications and optional sound/desktop alerts.
 - Team Radio portraits, timestamps and audio playback.
 - Three layouts, compact rows, dark/light themes and broadcast delay.
+
+Driver comparison collects lap history while the dashboard is open. Pit/out laps, cautions and
+deleted times are excluded from average pace. A race chase verdict needs at least 30 seconds
+of fresh gap updates; qualifying/practice show lap-time comparisons instead.
 
 ## Run locally
 

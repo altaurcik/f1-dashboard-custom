@@ -6,6 +6,7 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { useLivePreferences, type LiveLayout } from "@/stores/useLivePreferences";
 import Icon from "./Icon";
+import DriverComparisonPanel from "./DriverComparisonPanel";
 import StintTimeline, { StintAxis } from "./StintTimeline";
 import { getStintLapScale } from "@/lib/stintTimeline";
 import { canShowQualifyingGap, isLastLapDeleted, isIntermediateQualifyingFinish } from "@/lib/timingConsistency";
@@ -135,8 +136,7 @@ export default function LiveTiming() {
 						<div className="live-map-column">
 							<TrackPanel />
 							<div className="live-support-grid">
-								<TelemetryPanel />
-								<BenchmarksPanel />
+								<DriverComparisonPanel />
 								<RaceEventsPanel />
 								<RadioPanel />
 							</div>
@@ -744,169 +744,6 @@ function TrackPanel() {
 							</select>
 						</label>
 					</div>
-				)}
-			</div>
-		</Panel>
-	);
-}
-function BenchmarksPanel() {
-	const data = useDataStore((state) => state.state);
-	const reference = useReferenceContext();
-	const best = Object.values(data?.TimingData?.Lines ?? {})
-		.filter((driver) => driver.BestLapTime?.Value)
-		.sort((a, b) => lapSeconds(a.BestLapTime.Value) - lapSeconds(b.BestLapTime.Value))[0];
-	const seconds = best ? lapSeconds(best.BestLapTime.Value) : null;
-	const previousTitle =
-		data?.SessionInfo?.Type === "Practice"
-			? `PREVIOUS ${data.SessionInfo.Name.toUpperCase()} EDITION`
-			: "PREVIOUS EDITION";
-	return (
-		<Panel
-			title="Best Lap Benchmarks"
-			icon="clock"
-			actions={
-				<button
-					aria-label="Best lap benchmarks explanation"
-					title="Previous Edition: fastest lap in this session at the previous edition. Lap Record: fastest Grand Prix race lap. Track Record: fastest official lap across all sessions."
-				>
-					<Icon name="help" size={15} />
-				</button>
-			}
-		>
-			<div className="live-benchmarks">
-				<div className="live-session-best">
-					<small>SESSION BEST</small>
-					<div>
-						<strong>{best?.BestLapTime.Value || "—"}</strong>
-						<span>
-							{best && data?.DriverList?.[best.RacingNumber] && (
-								<TeamMark driver={data.DriverList[best.RacingNumber]} />
-							)}
-							{best && data?.DriverList?.[best.RacingNumber]?.Tla}
-						</span>
-					</div>
-				</div>
-				{[
-					[previousTitle, reference?.previous],
-					["LAP RECORD", reference?.lapRecord],
-					["TRACK RECORD", reference?.trackRecord],
-				].map(([title, raw]) => {
-					const record = raw as import("@/types/live-context.type").BenchmarkRecord | null;
-					const delta = record && seconds !== null ? seconds - record.seconds : null;
-					return (
-						<div className="live-record-card" key={String(title)}>
-							<small>{String(title)}</small>
-							<div>
-								<b>{record?.time || (reference ? "Not available" : "Loading…")}</b>
-								{delta !== null && (
-									<span className={clsx("live-lap-delta", delta < 0 ? "faster" : "slower")}>
-										{delta >= 0 ? "+" : ""}
-										{delta.toFixed(3)}s
-									</span>
-								)}
-							</div>
-							{record && (
-								<p>
-									{record.driver_name}, {record.year}
-								</p>
-							)}
-						</div>
-					);
-				})}
-			</div>
-		</Panel>
-	);
-}
-function lapSeconds(time: string) {
-	const parts = time.split(":").map(Number);
-	return parts.length === 2 ? parts[0] * 60 + parts[1] : parts[0];
-}
-
-const pedalPercent = (value: number | undefined) => (value !== undefined && value >= 0 && value <= 100 ? value : null);
-function TelemetryPanel() {
-	const selected = useLivePreferences((s) => s.selected);
-	const data = useDataStore((s) => s.state);
-	const cars = useDataStore((s) => s.carsData);
-	const [history, setHistory] = useState<Record<string, number[]>>({});
-	useEffect(
-		() =>
-			useDataStore.subscribe((state, previous) => {
-				if (state.carsData === previous.carsData) return;
-				setHistory((old) =>
-					Object.fromEntries(
-						selected.map((number) => [
-							number,
-							[...(old[number] ?? []).slice(-79), state.carsData?.[number]?.Channels[2] ?? 0],
-						]),
-					),
-				);
-			}),
-		[selected],
-	);
-	return (
-		<Panel title="Telemetry" icon="gauge">
-			<div className="live-telemetry">
-				{!selected.length ? (
-					<div className="live-empty">
-						<Icon name="gauge" size={28} />
-						<b>No Drivers Selected</b>
-						<p>
-							Select up to 2 drivers from
-							<br />
-							the leaderboard
-						</p>
-					</div>
-				) : (
-					<>
-						{selected.map((number) => {
-							const driver = data?.DriverList?.[number];
-							const channels = cars?.[number]?.Channels;
-							return (
-								<div key={number} className="live-telemetry-driver" style={{ borderColor: "#" + driver?.TeamColour }}>
-									<div>
-										<b style={{ color: "#" + driver?.TeamColour }}>{driver?.Tla || number}</b>
-										<strong>
-											{channels?.[2] ?? "—"}
-											<small>km/h</small>
-										</strong>
-										<span>{channels?.[3] === 0 ? "N" : (channels?.[3] ?? "—")}</span>
-									</div>
-									<label>
-										<span>THROTTLE</span>
-										<meter min="0" max="100" value={pedalPercent(channels?.[4]) ?? 0} />
-										<em>{pedalPercent(channels?.[4]) !== null ? pedalPercent(channels?.[4]) + "%" : "—"}</em>
-									</label>
-									<label>
-										<span>BRAKE</span>
-										<meter min="0" max="100" value={pedalPercent(channels?.[5]) ?? 0} />
-										<em>{pedalPercent(channels?.[5]) !== null ? pedalPercent(channels?.[5]) + "%" : "—"}</em>
-									</label>
-								</div>
-							);
-						})}
-						<svg
-							className="live-speed-chart"
-							viewBox="0 0 320 75"
-							preserveAspectRatio="none"
-							aria-label="Live speed history"
-						>
-							<path d="M0 25H320M0 50H320" stroke="var(--live-border)" />
-							{selected.map((number) => (
-								<polyline
-									key={number}
-									fill="none"
-									stroke={"#" + (data?.DriverList?.[number]?.TeamColour || "ffffff")}
-									strokeWidth="2"
-									points={(history[number] ?? [])
-										.map(
-											(speed, i, values) =>
-												`${(i / Math.max(1, values.length - 1)) * 320},${75 - (Math.min(360, speed) / 360) * 75}`,
-										)
-										.join(" ")}
-								/>
-							))}
-						</svg>
-					</>
 				)}
 			</div>
 		</Panel>

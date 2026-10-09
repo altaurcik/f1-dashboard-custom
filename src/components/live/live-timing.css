@@ -2402,3 +2402,331 @@
 .live-theme-light .live-radio-transcript {
 	color: #334155;
 }
+
+/* Two-driver comparison replaces Telemetry + Benchmarks in every layout. */
+.live-driver-comparison {
+	grid-column: 1 / -1;
+	min-width: 0;
+}
+.comparison-window {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	font-size: 11px;
+	color: var(--live-muted);
+}
+.live-driver-comparison select {
+	color: var(--live-text);
+	background: var(--live-bg);
+	border: 1px solid var(--live-border);
+	border-radius: 4px;
+	padding: 6px;
+	min-width: 0;
+}
+.live-driver-comparison select:focus-visible {
+	outline: 2px solid #60a5fa;
+	outline-offset: 2px;
+}
+.comparison-body {
+	padding: 12px;
+}
+.comparison-selectors {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.comparison-driver-picker {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	flex: 0 1 124px;
+	min-width: 0;
+	height: 30px;
+	padding: 0 9px;
+	border: 1px solid var(--live-border);
+	border-radius: 4px;
+	background: var(--live-bg);
+	cursor: pointer;
+}
+.comparison-driver-picker:hover {
+	border-color: var(--live-muted);
+}
+.comparison-driver-picker:has(select:focus-visible) {
+	outline: 2px solid #60a5fa;
+	outline-offset: 2px;
+}
+.comparison-driver-picker.is-disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+.comparison-driver-picker > i {
+	width: 5px;
+	height: 14px;
+	flex: 0 0 5px;
+	border-radius: 2px;
+}
+.comparison-driver-code {
+	font-size: 12px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+.comparison-driver-position {
+	font-size: 10px;
+	color: var(--live-muted);
+	margin-left: auto;
+}
+.comparison-driver-chevron {
+	margin-left: auto;
+	font-size: 11px;
+	color: var(--live-muted);
+}
+.comparison-driver-picker select {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	padding: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+.comparison-driver-picker select:disabled {
+	cursor: default;
+}
+.comparison-versus {
+	font-size: 10px;
+	color: var(--live-muted);
+}
+.comparison-verdict {
+	margin-top: 12px;
+	padding: 10px 12px;
+	border: 1px solid var(--live-border);
+	background: var(--live-bg);
+	border-radius: 5px;
+}
+.comparison-verdict strong {
+	font-size: 15px;
+}
+.comparison-verdict p {
+	margin: 4px 0 0;
+	font-size: 11px;
+	line-height: 1.5;
+	color: var(--live-muted);
+}
+.verdict-catching {
+	border-left: 3px solid #22c55e;
+}
+.verdict-catching strong {
+	color: #4ade80;
+}
+.verdict-falling {
+	border-left: 3px solid #f87171;
+}
+.verdict-falling strong {
+	color: #f87171;
+}
+.verdict-steady {
+	border-left: 3px solid #60a5fa;
+}
+.comparison-metrics {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 8px;
+	margin: 12px 0;
+}
+.comparison-metrics > div {
+	min-width: 0;
+	padding: 10px;
+	background: var(--live-bg);
+	border: 1px solid var(--live-border);
+	border-radius: 4px;
+	display: grid;
+	gap: 5px;
+}
+.comparison-metrics span {
+	color: var(--live-muted);
+	font-size: 9px;
+	letter-spacing: 0.02em;
+}
+.comparison-metrics strong {
+	font-size: 18px;
+	font-variant-numeric: tabular-nums;
+	overflow-wrap: anywhere;
+}
+.comparison-metrics small {
+	font-size: 10px;
+	color: var(--live-muted);
+	line-height: 1.4;
+}
+.comparison-details {
+	display: grid;
+	grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+	gap: 14px;
+}
+.comparison-details > div {
+	min-width: 0;
+}
+.comparison-section-title {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+.comparison-section-title b {
+	font-size: 12px;
+}
+.comparison-section-title small {
+	font-size: 10px;
+	color: var(--live-muted);
+}
+.comparison-lap-scroll {
+	overflow-x: auto;
+}
+.comparison-laps table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
+}
+.comparison-laps th {
+	font-size: 9px;
+	color: var(--live-muted);
+	text-align: right;
+	padding: 6px;
+}
+.comparison-laps td {
+	padding: 7px 6px;
+	text-align: right;
+	border-top: 1px solid var(--live-border);
+	white-space: nowrap;
+}
+.comparison-laps td:first-child,
+.comparison-laps th:first-child {
+	text-align: left;
+}
+.comparison-laps td small {
+	display: block;
+	font-size: 9px;
+}
+.comparison-laps .lap-excluded {
+	color: var(--live-muted);
+}
+.comparison-laps .comparison-no-laps {
+	white-space: normal;
+	text-align: left;
+	color: var(--live-muted);
+	line-height: 1.5;
+}
+.comparison-last {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 8px;
+	font-size: 10px;
+	color: var(--live-muted);
+}
+.comparison-last b {
+	color: var(--live-text);
+	font-weight: 500;
+}
+.comparison-last .lap-excluded b {
+	text-decoration: line-through;
+	color: #f87171;
+}
+.comparison-gap-chart {
+	color: #60a5fa;
+}
+.comparison-gap-chart svg {
+	display: block;
+	width: 100%;
+	height: 100px;
+}
+.comparison-gap-chart > div {
+	display: flex;
+	justify-content: space-between;
+	font-size: 10px;
+}
+.comparison-chart-empty {
+	min-height: 86px;
+	display: grid;
+	place-items: center;
+	font-size: 11px;
+	color: var(--live-muted);
+	border: 1px dashed var(--live-border);
+	border-radius: 4px;
+}
+.comparison-bests {
+	display: grid;
+	gap: 8px;
+}
+.comparison-bests > div {
+	display: flex;
+	justify-content: space-between;
+	padding: 10px;
+	border: 1px solid var(--live-border);
+	border-radius: 4px;
+	font-size: 12px;
+}
+.comparison-note,
+.comparison-estimate,
+.comparison-footnote {
+	font-size: 10px;
+	line-height: 1.5;
+	color: var(--live-muted);
+	margin: 8px 0 0;
+}
+.comparison-estimate {
+	color: var(--live-text);
+}
+.comparison-estimate small {
+	display: block;
+	color: var(--live-muted);
+}
+.live-theme-light .verdict-catching strong {
+	color: #15803d;
+}
+.live-theme-light .verdict-falling strong {
+	color: #b91c1c;
+}
+@container support-panel (max-width: 620px) {
+	.comparison-metrics {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	.comparison-details {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+@container support-panel (max-width: 340px) {
+	.comparison-selectors {
+		gap: 6px;
+	}
+	.comparison-driver-picker {
+		padding: 0 7px;
+	}
+	.comparison-driver-position {
+		display: none;
+	}
+	.live-driver-comparison .live-panel-header {
+		flex-wrap: wrap;
+		height: auto;
+		min-height: 44px;
+		gap: 8px;
+		padding: 10px 12px;
+	}
+	.comparison-window {
+		margin-left: auto;
+	}
+	.comparison-metrics strong {
+		font-size: 16px;
+	}
+	.comparison-section-title {
+		flex-wrap: wrap;
+	}
+}
+
+.comparison-pace-line {
+	margin: 10px 0 0;
+	font-size: 12px;
+	color: var(--live-text);
+}

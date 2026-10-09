@@ -255,6 +255,7 @@ export type TimingStatsDriver = {
 };
 
 export type PersonalBestLapTime = {
+	Lap?: number;
 	Value: string;
 	Position: number;
 };
