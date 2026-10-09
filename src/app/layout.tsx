@@ -21,8 +21,6 @@ export default function RootLayout({ children }: Props) {
 	return (
 		<html lang="en" className={`${GeistSans.variable} ${GeistMono.variable} font-sans text-white`}>
 			<head>
-				<EnvScript />
-
 				{env.TRACKING_ID && env.TRACKING_URL && (
 					<>
 						<Script strategy="afterInteractive" data-site-id={env.TRACKING_ID} src={env.TRACKING_URL} />
@@ -31,6 +29,7 @@ export default function RootLayout({ children }: Props) {
 			</head>
 
 			<body>
+				<EnvScript />
 				<OledModeProvider>{children}</OledModeProvider>
 			</body>
 		</html>

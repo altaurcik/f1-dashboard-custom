@@ -1,0 +1,27 @@
+{
+	"checkedAt": "2026-10-09T12:27:43.757Z",
+	"source": "https://livetiming.formula1.com/signalrcore",
+	"authentication": false,
+	"initialTopics": [
+		"SessionInfo",
+		"SessionStatus",
+		"TimingData",
+		"TimingStats",
+		"TimingAppData",
+		"WeatherData",
+		"DriverList",
+		"TeamRadio",
+		"ExtrapolatedClock",
+		"TrackStatus"
+	],
+	"session": "Sprint Qualifying",
+	"sessionStatus": {
+		"Status": "Inactive",
+		"Started": "Inactive",
+		"_kf": true
+	},
+	"driverCount": 22,
+	"hasInitialPositions": false,
+	"hasInitialCarData": false,
+	"updates": {}
+}

@@ -6,6 +6,7 @@ import type { CarData, CarsData, Position, Positions, State } from "@/types/stat
 import type { MessageInitial, MessageUpdate } from "@/types/message.type";
 
 import { inflate } from "@/lib/inflate";
+import { ingestPositionFrames, resetPositionTimeline } from "@/lib/positionTimeline";
 import { utcToLocalMs } from "@/lib/utcToLocalMs";
 
 import { useSettingsStore } from "@/stores/useSettingsStore";
@@ -47,15 +48,20 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 
 	const delayRef = useRef<number>(0);
 
-	useSettingsStore.subscribe(
-		(state) => state.delay,
-		(delay) => (delayRef.current = delay),
-		{ fireImmediately: true },
+	useEffect(
+		() =>
+			useSettingsStore.subscribe(
+				(state) => state.delay,
+				(delay) => (delayRef.current = delay),
+				{ fireImmediately: true },
+			),
+		[],
 	);
 
 	const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
 	const handleInitial = ({ CarDataZ: carZ, PositionZ: posZ, ...initial }: MessageInitial) => {
+		resetPositionTimeline();
 		updateState(initial);
 
 		Object.keys(buffers).forEach((key) => {
@@ -66,7 +72,7 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 
 		if (carZ) {
 			const carData = inflate<CarData>(carZ);
-			updateCarData(carData.Entries[0].Cars);
+			if (carData.Entries[0]) updateCarData(carData.Entries[0].Cars);
 
 			for (const entry of carData.Entries) {
 				carBuffer.pushTimed(entry.Cars, utcToLocalMs(entry.Utc));
@@ -75,7 +81,8 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 
 		if (posZ) {
 			const position = inflate<Position>(posZ);
-			updatePosition(position.Position[0].Entries);
+			ingestPositionFrames(position.Position);
+			if (position.Position[0]) updatePosition(position.Position[0].Entries);
 
 			for (const entry of position.Position) {
 				posBuffer.pushTimed(entry.Entries, utcToLocalMs(entry.Timestamp));
@@ -99,6 +106,7 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 
 		if (posZ) {
 			const position = inflate<Position>(posZ);
+			ingestPositionFrames(position.Position);
 			for (const entry of position.Position) {
 				posBuffer.pushTimed(entry.Entries, utcToLocalMs(entry.Timestamp));
 			}

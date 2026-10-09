@@ -8,7 +8,14 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 const root = process.cwd();
-const pythonPath = process.env.WHISPER_PYTHON ?? path.join(root, ".venv-whisper/bin/python");
+const pythonPath =
+	process.env.WHISPER_PYTHON ??
+	path.join(
+		root,
+		".venv-whisper",
+		process.platform === "win32" ? "Scripts" : "bin",
+		process.platform === "win32" ? "python.exe" : "python",
+	);
 const scriptPath = path.join(root, "tools/transcribe_radio.py");
 const cacheDir = path.join(root, ".cache/radio-transcripts");
 const localEnvPath = path.join(root, ".env.local");
@@ -153,7 +160,7 @@ function cleanTranscriptionError(stderr: string): string {
 	}
 
 	if (stderr.includes("HF_TOKEN is required")) {
-		return "Paste HF_TOKEN into /Users/altaur/Documents/F1Sim/f1-dashboard-custom/.env.local";
+		return "Configure HF_TOKEN in the server environment for speaker diarization.";
 	}
 
 	const lines = stderr
@@ -162,6 +169,19 @@ function cleanTranscriptionError(stderr: string): string {
 		.filter(Boolean);
 
 	return lines.at(-1) ?? "";
+}
+
+async function transcriptionAvailable(): Promise<boolean> {
+	if (!(await getHfToken())) return false;
+	try {
+		return (await stat(pythonPath)).isFile();
+	} catch {
+		return false;
+	}
+}
+
+export async function GET() {
+	return NextResponse.json({ available: await transcriptionAvailable() }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: NextRequest) {
@@ -174,18 +194,15 @@ export async function POST(request: NextRequest) {
 
 		const audioUrl = validateAudioUrl(payload.audioUrl);
 		const transcriptPath = getTranscriptPath(audioUrl);
-		const hfToken = await getHfToken();
-
-		if (!hfToken) {
-			return NextResponse.json(
-				{ error: "Paste HF_TOKEN into /Users/altaur/Documents/F1Sim/f1-dashboard-custom/.env.local" },
-				{ status: 500 },
-			);
-		}
-
-		await mkdir(cacheDir, { recursive: true });
-
 		if (!(await hasTranscript(transcriptPath))) {
+			const hfToken = await getHfToken();
+			if (!hfToken || !(await transcriptionAvailable())) {
+				return NextResponse.json(
+					{ code: "TRANSCRIPTION_UNAVAILABLE", error: "Transcript unavailable. Audio is available." },
+					{ status: 503 },
+				);
+			}
+			await mkdir(cacheDir, { recursive: true });
 			await runTranscription(audioUrl, transcriptPath, hfToken);
 		}
 

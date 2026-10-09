@@ -1,7 +1,4 @@
 import type { Map, TrackPosition } from "@/types/map.type";
-import type { Message } from "@/types/state.type";
-
-import { sortUtc } from "@/lib/sorting";
 
 export const rad = (deg: number) => deg * (Math.PI / 180);
 
@@ -69,47 +66,11 @@ export const createSectors = (map: Map): MapSector[] => {
 	return sectors;
 };
 
-export const findYellowSectors = (messages: Message[] | undefined): Set<number> => {
-	const msgs = messages?.sort(sortUtc).filter((msg) => {
-		return msg.Flag === "YELLOW" || msg.Flag === "DOUBLE YELLOW" || msg.Flag === "CLEAR";
-	});
-
-	if (!msgs) {
-		return new Set();
-	}
-
-	const done: Set<number> = new Set();
-	const sectors: Set<number> = new Set();
-	for (let i = 0; i < msgs.length; i++) {
-		const msg = msgs[i];
-		if (msg.Scope === "Track" && msg.Flag !== "CLEAR") {
-			// Spam with sectors so all sectors are yellow no matter what
-			// number of sectors there really are
-			for (let j = 0; j < 100; j++) {
-				sectors.add(j);
-			}
-			return sectors;
-		}
-		if (msg.Scope === "Sector") {
-			if (!msg.Sector || done.has(msg.Sector)) {
-				continue;
-			}
-			if (msg.Flag === "CLEAR") {
-				done.add(msg.Sector);
-			} else {
-				sectors.add(msg.Sector);
-			}
-		}
-	}
-	return sectors;
-};
-
 type RenderedSector = {
 	number: number;
 	d: string;
 	color: string;
 	strokeWidth: number;
-	pulse?: number;
 };
 
 export const prioritizeColoredSectors = (a: RenderedSector, b: RenderedSector) => {
@@ -121,10 +82,3 @@ export const prioritizeColoredSectors = (a: RenderedSector, b: RenderedSector) =
 	}
 	return a.number - b.number;
 };
-
-export const getSectorColor = (
-	sector: MapSector,
-	bySector: boolean | undefined,
-	trackColor: string | undefined = "stroke-white",
-	yellowSectors: Set<number>,
-) => (bySector ? (yellowSectors.has(sector.number) ? trackColor : "stroke-white") : trackColor);

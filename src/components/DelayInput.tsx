@@ -33,15 +33,27 @@ export default function DelayInput({ className, saveDelay }: Props) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [delayState]);
 
-	useEffect(() => {
-		if (!isPaused) setDelayState(currentDelay.toString());
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [isPaused]);
+	useEffect(
+		() =>
+			useSettingsStore.subscribe(
+				(state) => state.delayIsPaused,
+				(paused) => {
+					if (!paused) setDelayState(useSettingsStore.getState().delay.toString());
+				},
+			),
+		[],
+	);
 
-	useEffect(() => {
-		if (isPaused) setDelayState(currentDelay.toString());
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [currentDelay]);
+	useEffect(
+		() =>
+			useSettingsStore.subscribe(
+				(state) => state.delay,
+				(delay) => {
+					if (useSettingsStore.getState().delayIsPaused) setDelayState(delay.toString());
+				},
+			),
+		[],
+	);
 
 	const handleChange = (v: string) => {
 		setDelayState(v);

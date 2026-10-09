@@ -1,0 +1,175 @@
+{
+	"checkedAt": "2026-10-09T12:18:53.052Z",
+	"mode": "historical and metadata verification; authenticated live not tested",
+	"results": [
+		{
+			"name": "DriverList",
+			"url": "https://livetiming.formula1.com/static/2023/2023-09-17_Singapore_Grand_Prix/2023-09-15_Practice_1/DriverList.jsonStream",
+			"status": 206,
+			"contentType": "application/octet-stream",
+			"parsed": true,
+			"keys": [
+				"RacingNumber",
+				"BroadcastName",
+				"FullName",
+				"Tla",
+				"Line",
+				"TeamName",
+				"TeamColour",
+				"FirstName",
+				"LastName",
+				"Reference",
+				"HeadshotUrl",
+				"CountryCode"
+			]
+		},
+		{
+			"name": "ExtrapolatedClock",
+			"url": "https://livetiming.formula1.com/static/2023/2023-09-17_Singapore_Grand_Prix/2023-09-15_Practice_1/ExtrapolatedClock.jsonStream",
+			"status": 206,
+			"contentType": "application/octet-stream",
+			"parsed": true,
+			"keys": ["Utc", "Remaining", "Extrapolating"]
+		},
+		{
+			"name": "TimingData",
+			"url": "https://livetiming.formula1.com/static/2023/2023-09-17_Singapore_Grand_Prix/2023-09-15_Practice_1/TimingData.jsonStream",
+			"status": 206,
+			"contentType": "application/octet-stream",
+			"parsed": true,
+			"keys": []
+		},
+		{
+			"name": "TimingStats",
+			"url": "https://livetiming.formula1.com/static/2023/2023-09-17_Singapore_Grand_Prix/2023-09-15_Practice_1/TimingStats.jsonStream",
+			"status": 206,
+			"contentType": "application/octet-stream",
+			"parsed": true,
+			"keys": ["Line", "RacingNumber", "PersonalBestLapTime", "BestSectors", "BestSpeeds"]
+		},
+		{
+			"name": "TimingAppData",
+			"url": "https://livetiming.formula1.com/static/2023/2023-09-17_Singapore_Grand_Prix/2023-09-15_Practice_1/TimingAppData.jsonStream",
+			"status": 206,
+			"contentType": "application/octet-stream",
+			"parsed": true,
+			"keys": ["RacingNumber", "Line"]
+		},
+		{
+			"name": "WeatherData",
+			"url": "https://livetiming.formula1.com/static/2023/2023-09-17_Singapore_Grand_Prix/2023-09-15_Practice_1/WeatherData.jsonStream",
+			"status": 206,
+			"contentType": "application/octet-stream",
+			"parsed": true,
+			"keys": ["AirTemp", "Humidity", "Pressure", "Rainfall", "TrackTemp", "WindDirection", "WindSpeed"]
+		},
+		{
+			"name": "TrackStatus",
+			"url": "https://livetiming.formula1.com/static/2023/2023-09-17_Singapore_Grand_Prix/2023-09-15_Practice_1/TrackStatus.jsonStream",
+			"status": 206,
+			"contentType": "application/octet-stream",
+			"parsed": true,
+			"keys": ["Status", "Message"]
+		},
+		{
+			"name": "SessionStatus",
+			"url": "https://livetiming.formula1.com/static/2023/2023-09-17_Singapore_Grand_Prix/2023-09-15_Practice_1/SessionStatus.jsonStream",
+			"status": 206,
+			"contentType": "application/octet-stream",
+			"parsed": true,
+			"keys": ["Status"]
+		},
+		{
+			"name": "RaceControlMessages",
+			"url": "https://livetiming.formula1.com/static/2023/2023-09-17_Singapore_Grand_Prix/2023-09-15_Practice_1/RaceControlMessages.jsonStream",
+			"status": 206,
+			"contentType": "application/octet-stream",
+			"parsed": true,
+			"keys": ["Messages"]
+		},
+		{
+			"name": "TeamRadio",
+			"url": "https://livetiming.formula1.com/static/2023/2023-09-17_Singapore_Grand_Prix/2023-09-15_Practice_1/TeamRadio.jsonStream",
+			"status": 206,
+			"contentType": "application/octet-stream",
+			"parsed": true,
+			"keys": ["Captures"]
+		},
+		{
+			"name": "Position.z",
+			"url": "https://livetiming.formula1.com/static/2023/2023-09-17_Singapore_Grand_Prix/2023-09-15_Practice_1/Position.z.jsonStream",
+			"status": 206,
+			"contentType": "application/octet-stream",
+			"parsed": true,
+			"keys": ["Timestamp", "Entries"],
+			"entryKeys": ["Status", "X", "Y", "Z"]
+		},
+		{
+			"name": "CarData.z",
+			"url": "https://livetiming.formula1.com/static/2023/2023-09-17_Singapore_Grand_Prix/2023-09-15_Practice_1/CarData.z.jsonStream",
+			"status": 206,
+			"contentType": "application/octet-stream",
+			"parsed": true,
+			"keys": ["Utc", "Cars"],
+			"channels": ["0", "2", "3", "4", "5", "45"]
+		},
+		{
+			"name": "SessionInfo",
+			"url": "https://livetiming.formula1.com/static/2023/2023-09-17_Singapore_Grand_Prix/2023-09-15_Practice_1/SessionInfo.json",
+			"status": 200,
+			"contentType": "application/json",
+			"parsed": true,
+			"keys": ["Meeting", "ArchiveStatus", "Key", "Type", "Number", "Name", "StartDate", "EndDate", "GmtOffset", "Path"]
+		},
+		{
+			"name": "LapCount (race)",
+			"url": "https://livetiming.formula1.com/static/2023/2023-09-17_Singapore_Grand_Prix/2023-09-17_Race/LapCount.jsonStream",
+			"status": 206,
+			"contentType": "application/octet-stream",
+			"parsed": true,
+			"keys": ["CurrentLap", "TotalLaps"]
+		},
+		{
+			"name": "Calendar 2026",
+			"url": "https://livetiming.formula1.com/static/2026/Index.json",
+			"status": 200,
+			"contentType": "application/json",
+			"parsed": true,
+			"keys": ["Year", "Meetings"]
+		},
+		{
+			"name": "TeamRadio MP3",
+			"url": "https://livetiming.formula1.com/static/2023/2023-09-17_Singapore_Grand_Prix/2023-09-15_Practice_1/TeamRadio/SERPER01_11_20230915_104008.mp3",
+			"status": 200,
+			"contentType": "audio/mpeg",
+			"parsed": false,
+			"keys": []
+		},
+		{
+			"name": "OpenF1 archived driver",
+			"url": "https://api.openf1.org/v1/drivers?session_key=9158&driver_number=1",
+			"status": 401,
+			"contentType": "application/octet-stream, application/json",
+			"parsed": true,
+			"keys": ["detail"],
+			"detail": "Live F1 session in progress. Global API access (including past sessions) is restricted to authenticated users until the session ends. Get an API key here: https://buy.stripe.com/eVqcN41BPekP0iIalBcEw02"
+		},
+		{
+			"name": "Jolpica",
+			"url": "https://api.jolpi.ca/ergast/f1/2025/circuits/marina_bay/fastest/1/results/?limit=100",
+			"status": 200,
+			"contentType": "application/json",
+			"parsed": true,
+			"keys": ["MRData"],
+			"races": 1
+		},
+		{
+			"name": "GeoJSON",
+			"url": "https://raw.githubusercontent.com/bacinger/f1-circuits/master/circuits/sg-2008.geojson",
+			"status": 200,
+			"contentType": "text/plain; charset=utf-8",
+			"parsed": true,
+			"keys": ["type", "name", "bbox", "features"]
+		}
+	]
+}

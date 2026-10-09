@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import clsx from "clsx";
 
@@ -8,6 +9,22 @@ import { sortUtc } from "@/lib/sorting";
 import RadioMessage from "@/components/dashboard/RadioMessage";
 
 export default function TeamRadios() {
+	const [transcriptionAvailable, setTranscriptionAvailable] = useState<boolean | null>(null);
+
+	useEffect(() => {
+		const controller = new AbortController();
+		fetch("/api/radio-transcript", { signal: controller.signal, cache: "no-store" })
+			.then(async (response) => {
+				if (!response.ok) throw new Error("Transcription status unavailable.");
+				return (await response.json()) as { available: boolean };
+			})
+			.then((status) => setTranscriptionAvailable(status.available))
+			.catch(() => {
+				if (!controller.signal.aborted) setTranscriptionAvailable(false);
+			});
+		return () => controller.abort();
+	}, []);
+
 	const drivers = useDataStore((state) => state.state?.DriverList);
 	const teamRadios = useDataStore((state) => state.state?.TeamRadio);
 	const sessionPath = useDataStore((state) => state.state?.SessionInfo?.Path);
@@ -26,15 +43,17 @@ export default function TeamRadios() {
 						<li className="rounded-md p-1.5 text-xs text-zinc-500">No team radio messages yet.</li>
 					)}
 
-					{teamRadios.Captures.sort(sortUtc)
+					{teamRadios.Captures.slice()
+						.sort(sortUtc)
 						.slice(0, 5)
-						.map((teamRadio, i) => (
+						.map((teamRadio) => (
 							<RadioMessage
-								key={`radio.${i}`}
+								key={`radio.${teamRadio.RacingNumber}.${teamRadio.Utc}.${teamRadio.Path}`}
 								driver={drivers[teamRadio.RacingNumber]}
 								capture={teamRadio}
 								basePath={basePath}
 								gmtOffset={gmtOffset}
+								transcriptionAvailable={transcriptionAvailable}
 							/>
 						))}
 				</AnimatePresence>

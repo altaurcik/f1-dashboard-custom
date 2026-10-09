@@ -1,0 +1,32 @@
+{
+	"checkedAt": "2026-10-09T12:30:39.993Z",
+	"source": "https://livetiming.formula1.com/signalrcore",
+	"authentication": false,
+	"initialTopics": [
+		"SessionInfo",
+		"SessionStatus",
+		"TimingData",
+		"TimingStats",
+		"TimingAppData",
+		"WeatherData",
+		"DriverList",
+		"RaceControlMessages",
+		"TeamRadio",
+		"ExtrapolatedClock",
+		"TrackStatus"
+	],
+	"session": "Sprint Qualifying",
+	"sessionStatus": {
+		"Status": "Started",
+		"Started": "Started",
+		"_kf": true
+	},
+	"driverCount": 22,
+	"hasInitialPositions": false,
+	"hasInitialCarData": false,
+	"updates": {
+		"TimingData": 35,
+		"TimingAppData": 4,
+		"TimingStats": 1
+	}
+}

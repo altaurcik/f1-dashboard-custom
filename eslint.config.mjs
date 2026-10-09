@@ -8,10 +8,16 @@ const compat = new FlatCompat({
 	baseDirectory: import.meta.dirname,
 });
 
-const eslintConfig = [...nextCoreWebVitals, ...next, ...nextTypescript, ...compat.config({
-    extends: ["prettier"]
-}), {
-    ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts"]
-}];
+const eslintConfig = [
+	...nextCoreWebVitals,
+	...next,
+	...nextTypescript.map((config) => ({ ...config, files: config.files ?? ["**/*.{ts,tsx,mts,cts}"] })),
+	...compat.config({
+		extends: ["prettier"],
+	}),
+	{
+		ignores: ["node_modules/**", ".next/**", ".cache/**", ".yarn/**", "out/**", "build/**", "next-env.d.ts"],
+	},
+];
 
 export default eslintConfig;

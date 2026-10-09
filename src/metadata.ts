@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 	title,
 	description,
 
-	icons: "https://f1-dash.com/favicon.png",
+	icons: "/icon.png",
 
 	openGraph: {
 		title,

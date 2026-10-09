@@ -55,6 +55,9 @@ export type TimingAppDataDriver = {
 };
 
 export type Stint = {
+	StartLaps?: number;
+	LapNumber?: number;
+	TyresNotChanged?: string;
 	TotalLaps?: number;
 	Compound?: "SOFT" | "MEDIUM" | "HARD" | "INTERMEDIATE" | "WET";
 	New?: string; // TRUE | FALSE
@@ -206,6 +209,7 @@ export type TimingDataDriver = {
 	BestLapTime: PersonalBestLapTime;
 	LastLapTime: I1;
 	NumberOfLaps: number; // TODO check
+	NumberOfPitStops?: number;
 	KnockedOut?: boolean;
 	Cutoff?: boolean;
 };
@@ -230,6 +234,7 @@ export type Speeds = {
 };
 
 export type I1 = {
+	Lap?: number;
 	Value: string;
 	Status: number;
 	OverallFastest: boolean;

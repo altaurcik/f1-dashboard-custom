@@ -17,6 +17,7 @@ type Props = {
 	capture: RadioCapture;
 	basePath: string;
 	gmtOffset: string;
+	transcriptionAvailable: boolean | null;
 };
 
 let transcriptQueue = Promise.resolve();
@@ -30,7 +31,7 @@ function enqueueTranscript<T>(task: () => Promise<T>): Promise<T> {
 	return result;
 }
 
-export default function RadioMessage({ driver, capture, basePath, gmtOffset }: Props) {
+export default function RadioMessage({ driver, capture, basePath, gmtOffset, transcriptionAvailable }: Props) {
 	const audioRef = useRef<HTMLAudioElement | null>(null);
 
 	const [playing, setPlaying] = useState<boolean>(false);
@@ -77,13 +78,13 @@ export default function RadioMessage({ driver, capture, basePath, gmtOffset }: P
 	useEffect(() => {
 		let cancelled = false;
 
-		setTranscript("Queued for transcription...");
-		setTranscriptError(null);
+		if (transcriptionAvailable !== true) return;
 
 		enqueueTranscript(async () => {
 			if (cancelled) return;
 
 			setTranscript("Transcribing...");
+			setTranscriptError(null);
 
 			const response = await fetch("/api/radio-transcript", {
 				method: "POST",
@@ -93,7 +94,12 @@ export default function RadioMessage({ driver, capture, basePath, gmtOffset }: P
 				body: JSON.stringify({ audioUrl }),
 			});
 
-			const data = (await response.json()) as { text?: string; error?: string };
+			const data = (await response.json()) as { text?: string; error?: string; code?: string };
+
+			if (data.code === "TRANSCRIPTION_UNAVAILABLE") {
+				if (!cancelled) setTranscript("Transcript unavailable. Audio is available.");
+				return;
+			}
 
 			if (!response.ok) {
 				throw new Error(data.error ?? "Transcription failed.");
@@ -114,7 +120,7 @@ export default function RadioMessage({ driver, capture, basePath, gmtOffset }: P
 		return () => {
 			cancelled = true;
 		};
-	}, [audioUrl]);
+	}, [audioUrl, transcriptionAvailable]);
 
 	const favoriteDriver = useSettingsStore((state) => state.favoriteDrivers.includes(driver.RacingNumber));
 
@@ -136,19 +142,22 @@ export default function RadioMessage({ driver, capture, basePath, gmtOffset }: P
 			</div>
 
 			<div className="flex items-start gap-1">
-				<DriverTag className="!w-fit !rounded-md !px-0.5 !py-0.5 text-xs" teamColor={driver.TeamColour} short={driver.Tla} />
+				<DriverTag
+					className="!w-fit !rounded-md !px-0.5 !py-0.5 text-xs"
+					teamColor={driver.TeamColour}
+					short={driver.Tla}
+				/>
 
 				<PlayControls className="h-6! w-6! shrink-0" playing={playing} onClick={togglePlayback} />
-				<p className="min-w-0 flex-1 whitespace-pre-line text-[11px] leading-snug text-zinc-300">
-					{transcriptError ?? transcript}
+				<p className="min-w-0 flex-1 text-[11px] leading-snug whitespace-pre-line text-zinc-300">
+					{transcriptionAvailable === null
+						? "Checking transcript availability..."
+						: transcriptionAvailable === false
+							? "Transcript unavailable. Audio is available."
+							: (transcriptError ?? transcript)}
 				</p>
 
-				<audio
-					preload="none"
-					src={`${basePath}${capture.Path}`}
-					ref={audioRef}
-					onEnded={() => onEnded()}
-				/>
+				<audio preload="none" src={`${basePath}${capture.Path}`} ref={audioRef} onEnded={() => onEnded()} />
 			</div>
 		</motion.li>
 	);

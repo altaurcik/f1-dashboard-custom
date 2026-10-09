@@ -4,19 +4,12 @@ import type { PositionCar, TimingDataDriver } from "@/types/state.type";
 import type { Map, TrackPosition } from "@/types/map.type";
 
 import { fetchMap } from "@/lib/fetchMap";
+import { getDriverPositionAt, getPositionTime } from "@/lib/positionTimeline";
 
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
-import { getTrackStatusMessage } from "@/lib/getTrackStatusMessage";
-import {
-	createSectors,
-	findYellowSectors,
-	getSectorColor,
-	type MapSector,
-	prioritizeColoredSectors,
-	rad,
-	rotate,
-} from "@/lib/map";
+import { resolveTrackFlags, getTrackFlagTone } from "@/lib/trackFlags";
+import { createSectors, type MapSector, prioritizeColoredSectors, rad, rotate } from "@/lib/map";
 
 // This is basically fearlessly copied from
 // https://github.com/tdjsnelling/monaco
@@ -189,26 +182,30 @@ export default function Map({ filter }: Props) {
 		})();
 	}, [circuitKey]);
 
-	const yellowSectors = useMemo(() => findYellowSectors(raceControlMessages), [raceControlMessages]);
+	const flags = useMemo(() => resolveTrackFlags(raceControlMessages), [raceControlMessages]);
 
 	const renderedSectors = useMemo(() => {
-		const status = getTrackStatusMessage(trackStatus?.Status ? parseInt(trackStatus.Status) : undefined);
+		const colors = {
+			clear: "stroke-white",
+			yellow: "stroke-amber-400",
+			red: "stroke-red-500",
+			safety: "stroke-orange-400",
+		};
 
 		return sectors
 			.map((sector) => {
-				const color = getSectorColor(sector, status?.bySector, status?.trackColor, yellowSectors);
+				const color = colors[getTrackFlagTone(flags, trackStatus?.Status, sector.number)];
 				return {
 					color,
-					pulse: status?.pulse,
 					number: sector.number,
 					strokeWidth: color === "stroke-white" ? 60 : 120,
 					d: `M${sector.points[0].x},${sector.points[0].y} ${sector.points.map((point) => `L${point.x},${point.y}`).join(" ")}`,
 				};
 			})
 			.sort(prioritizeColoredSectors);
-	}, [trackStatus, sectors, yellowSectors]);
+	}, [trackStatus, sectors, flags]);
 
-	if (!points || !minX || !minY || !widthX || !widthY) {
+	if (!points || minX === null || minY === null || !widthX || !widthY) {
 		return (
 			<div className="h-full w-full p-2" style={{ minHeight: "35rem" }}>
 				<div className="h-full w-full animate-pulse rounded-lg bg-zinc-800" />
@@ -231,11 +228,6 @@ export default function Map({ filter }: Props) {
 			/>
 
 			{renderedSectors.map((sector) => {
-				const style = sector.pulse
-					? {
-							animation: `${sector.pulse * 100}ms linear infinite pulse`,
-						}
-					: {};
 				return (
 					<path
 						key={`map.sector.${sector.number}`}
@@ -245,7 +237,7 @@ export default function Map({ filter }: Props) {
 						strokeLinejoin="round"
 						fill="transparent"
 						d={sector.d}
-						style={style}
+						data-sector={sector.number}
 					/>
 				);
 			})}
@@ -273,7 +265,7 @@ export default function Map({ filter }: Props) {
 					/>
 				))}
 
-			{centerX && centerY && drivers && timingDrivers && (
+			{centerX !== null && centerY !== null && drivers && timingDrivers && (
 				<>
 					{Object.values(drivers)
 						.reverse()
@@ -295,6 +287,7 @@ export default function Map({ filter }: Props) {
 								<CarDot
 									key={`map.driver.${driver.RacingNumber}`}
 									favoriteDriver={favoriteDrivers.length > 0 ? favoriteDrivers.includes(driver.RacingNumber) : false}
+									number={driver.RacingNumber}
 									name={driver.Tla}
 									color={driver.TeamColour}
 									pit={pit}
@@ -328,6 +321,7 @@ const CornerNumber: React.FC<CornerNumberProps> = ({ number, x, y }) => {
 };
 
 type CarDotProps = {
+	number: string;
 	name: string;
 	color: string | undefined;
 	favoriteDriver: boolean;
@@ -343,56 +337,8 @@ type CarDotProps = {
 	transitionDuration: number;
 };
 
-function useSmoothedPoint(target: TrackPosition, durationSeconds: number): TrackPosition {
-	const [point, setPoint] = useState(target);
-	const pointRef = useRef(target);
-	const frameRef = useRef<number | null>(null);
-
-	useEffect(() => {
-		if (frameRef.current !== null) {
-			cancelAnimationFrame(frameRef.current);
-		}
-
-		const from = pointRef.current;
-		const to = target;
-		const durationMs = Math.max(0, durationSeconds * 1000);
-		const startedAt = performance.now();
-
-		if (durationMs === 0) {
-			pointRef.current = to;
-			setPoint(to);
-			return;
-		}
-
-		const tick = (now: number) => {
-			const progress = Math.min(1, (now - startedAt) / durationMs);
-			const next = {
-				x: from.x + (to.x - from.x) * progress,
-				y: from.y + (to.y - from.y) * progress,
-			};
-
-			pointRef.current = next;
-			setPoint(next);
-
-			if (progress < 1) {
-				frameRef.current = requestAnimationFrame(tick);
-			}
-		};
-
-		frameRef.current = requestAnimationFrame(tick);
-
-		return () => {
-			if (frameRef.current !== null) {
-				cancelAnimationFrame(frameRef.current);
-				frameRef.current = null;
-			}
-		};
-	}, [target.x, target.y, durationSeconds]);
-
-	return point;
-}
-
 const CarDot = ({
+	number,
 	pos,
 	name,
 	color,
@@ -405,12 +351,38 @@ const CarDot = ({
 	transitionDuration,
 }: CarDotProps) => {
 	const rotatedPos = rotate(pos.X, pos.Y, rotation, centerX, centerY);
-	const smoothedPos = useSmoothedPoint(rotatedPos, transitionDuration);
+	const groupRef = useRef<SVGGElement>(null);
+	const targetRef = useRef(rotatedPos);
+	useEffect(() => {
+		targetRef.current = rotate(pos.X, pos.Y, rotation, centerX, centerY);
+	}, [pos.X, pos.Y, rotation, centerX, centerY]);
+	useEffect(() => {
+		let frame = 0;
+		let current = targetRef.current;
+		let last = performance.now();
+		const tick = (now: number) => {
+			const position = getDriverPositionAt(number, getPositionTime(useSettingsStore.getState().delay, now));
+			if (position) current = rotate(position.X, position.Y, rotation, centerX, centerY);
+			else {
+				const alpha = Math.min(1, (now - last) / Math.max(100, transitionDuration * 1000));
+				current = {
+					x: current.x + (targetRef.current.x - current.x) * alpha,
+					y: current.y + (targetRef.current.y - current.y) * alpha,
+				};
+			}
+			last = now;
+			groupRef.current?.setAttribute("transform", "translate(" + current.x + " " + current.y + ")");
+			frame = requestAnimationFrame(tick);
+		};
+		frame = requestAnimationFrame(tick);
+		return () => cancelAnimationFrame(frame);
+	}, [number, rotation, centerX, centerY, transitionDuration]);
 	const opacity = hidden ? 0 : pit ? 0.3 : 1;
 
 	return (
 		<g
-			transform={`translate(${smoothedPos.x} ${smoothedPos.y})`}
+			ref={groupRef}
+			data-driver={number}
 			opacity={opacity}
 			className="fill-zinc-700"
 			style={{
@@ -420,23 +392,18 @@ const CarDot = ({
 			<circle id={`map.driver.circle`} r={120} />
 			<text
 				id={`map.driver.text`}
+				textAnchor="middle"
 				fontWeight="bold"
 				fontSize={120 * 3}
 				style={{
-					transform: "translateX(150px) translateY(-120px)",
+					transform: "translateY(-260px)",
 				}}
 			>
 				{name}
 			</text>
 
 			{favoriteDriver && (
-				<circle
-					id={`map.driver.favorite`}
-					className="stroke-sky-400"
-					r={180}
-					fill="transparent"
-					strokeWidth={40}
-				/>
+				<circle id={`map.driver.favorite`} className="stroke-sky-400" r={180} fill="transparent" strokeWidth={40} />
 			)}
 		</g>
 	);
