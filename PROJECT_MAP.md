@@ -211,16 +211,40 @@ corepack yarn dev --hostname 127.0.0.1 --port 3000
 | `F1_LIVE_WEBSOCKET_URL` | Необязательный SignalR relay; локально настроен публичный источник референса |
 | `API_URL` | Старый отдельный API расписания; пример `http://localhost:4001`, самим этим проектом не запускается |
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | Публичный token для планируемого подключения идентичной Mapbox-подложки; текущая карта работает без него через MapLibre |
-| `WHISPER_PYTHON`, `HF_TOKEN` | Необязательная транскрипция через Python/WhisperX; token остаётся серверным |
+| `WHISPER_PYTHON` | Python для локального faster-whisper; по умолчанию `.venv-whisper` |
+| `WHISPER_DIARIZE` | Разделение голосов включено по умолчанию; 0 отключает его только для диагностики |
+| `HF_TOKEN` | Сохранённый серверный token; рабочее распознавание и диаризация его не используют |
 | `WHISPER_MODEL`, `WHISPER_DEVICE`, `WHISPER_COMPUTE_TYPE` | Параметры распознавания |
-| `WHISPER_NUM_SPEAKERS`, `WHISPER_MIN_SPEAKERS`, `WHISPER_MAX_SPEAKERS` | Диаризация |
+| `WHISPER_SPEAKER_THRESHOLD`, `WHISPER_MAX_SPEAKERS` | Порог акустического различия голосов (0.4) и максимум голосов (2); второй голос не навязывается |
 | `TRACKING_ID`, `TRACKING_URL` | Необязательная аналитика |
 
-Транскрипция: [tools/transcribe_radio.py](tools/transcribe_radio.py),
-[tools/whisper-requirements.txt](tools/whisper-requirements.txt), `.cache/radio-transcripts`.
-Python-путь выбирается по платформе: Scripts/python.exe на Windows, bin/python на остальных системах.
-GET статуса возвращает available; POST без конфигурации возвращает TRANSCRIPTION_UNAVAILABLE/503.
-В новом радио основное отображение — портрет, имя, время и воспроизведение записи.
+Локальная транскрипция: [tools/transcribe_radio.py](tools/transcribe_radio.py),
+[tools/radio_diarization.py](tools/radio_diarization.py),
+[tools/whisper-requirements.txt](tools/whisper-requirements.txt), [radioTranscription.ts](src/lib/server/radioTranscription.ts).
+Сервер скачивает официальный MP3 F1 и запускает faster-whisper (medium.en, CPU/int8),
+затем SpeechBrain ECAPA-TDNN сравнивает акустические голоса в окнах речи.
+Кластеризация по cosine distance допускает один голос и ограничивает число голосов двумя;
+Whisper word timestamps связывают слова с голосами, соседние слова объединяются в реплики.
+Speaker 1/2 означают акустические группы внутри записи, а не подтверждённые роли пилота/инженера.
+Границы смены голоса приблизительны; короткая/шумная речь и наложение голосов могут давать ошибки.
+Разделение включено по умолчанию. HF_TOKEN не нужен и удаляется из окружения дочернего процесса;
+сохранённый token остаётся только в локальном .env.local, не участвует в inference.
+Модель speechbrain/spkrec-ecapa-voxceleb публична, Apache-2.0, ревизия закреплена в radio_diarization.py;
+веса загружаются при первом использовании, затем выполняются локально из кэша.
+PyAV декодирует звук без системного FFmpeg. PyAV 16.1.0 совместим с faster-whisper 1.2.1;
+Torch/TorchAudio 2.8.0 закреплены для API SpeechBrain 1.0.3.
+Запросы сериализуются на сервере, одинаковые объединяются; кэш в .cache/radio-transcripts
+учитывает модель, режим и параметры разделения. GET проверяет runtime/импорты и сообщает available/reason;
+успешный импорт не доказывает корректность выбранных весов/CUDA — их проверяет POST.
+POST возвращает text; неверный URL — 400, ошибка установки — 503, распознавания — 500.
+[src/hooks/useRadioTranscript.ts](src/hooks/useRadioTranscript.ts) используется новым Team Radio
+и старым RadioMessage. Последние пять записей распознаются автоматически; старые — Transcribe.
+Ошибка показывает Retry transcript; начатая расшифровка завершается даже при появлении новых записей.
+Аудиовоспроизведение работает независимо от распознавания. Карточки не сжимаются по высоте текста.
+Установка и параметры — [README.md](README.md).
+[next.config.ts](next.config.ts) исключает локальный Python и .cache из трассировки bundle API;
+при переносе проекта Python устанавливается отдельно. ESLint также исключает .venv-whisper.
+Регрессии: node tools/test-radio-transcription.cjs и Python tools/test_radio_diarization.py.
 
 ```powershell
 corepack yarn exec tsc --noEmit

@@ -16,7 +16,16 @@ const eslintConfig = [
 		extends: ["prettier"],
 	}),
 	{
-		ignores: ["node_modules/**", ".next/**", ".cache/**", ".yarn/**", "out/**", "build/**", "next-env.d.ts"],
+		ignores: [
+			"node_modules/**",
+			".next/**",
+			".cache/**",
+			".venv-whisper/**",
+			".yarn/**",
+			"out/**",
+			"build/**",
+			"next-env.d.ts",
+		],
 	},
 ];
 

@@ -1,2 +1,10 @@
 requests==2.32.5
-whisperx==3.8.6
+faster-whisper==1.2.1
+# PyAV 19 removed metadata_errors used by faster-whisper 1.2.1.
+av==16.1.0
+# Public acoustic speaker model; no pyannote or HF_TOKEN is required.
+speechbrain==1.0.3
+huggingface-hub==0.36.2
+# Keep the TorchAudio API used by SpeechBrain 1.0.3 (removed in 2.9).
+torch==2.8.0
+torchaudio==2.8.0

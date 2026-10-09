@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { motion } from "motion/react";
 import { utc } from "moment";
 import clsx from "clsx";
+
+import { useRadioTranscript } from "@/hooks/useRadioTranscript";
 
 import type { Driver, RadioCapture } from "@/types/state.type";
 
@@ -20,25 +22,13 @@ type Props = {
 	transcriptionAvailable: boolean | null;
 };
 
-let transcriptQueue = Promise.resolve();
-
-function enqueueTranscript<T>(task: () => Promise<T>): Promise<T> {
-	const result = transcriptQueue.then(task, task);
-	transcriptQueue = result.then(
-		() => undefined,
-		() => undefined,
-	);
-	return result;
-}
-
 export default function RadioMessage({ driver, capture, basePath, gmtOffset, transcriptionAvailable }: Props) {
 	const audioRef = useRef<HTMLAudioElement | null>(null);
 
 	const [playing, setPlaying] = useState<boolean>(false);
-	const [transcript, setTranscript] = useState<string>("Queued for transcription...");
-	const [transcriptError, setTranscriptError] = useState<string | null>(null);
 
 	const audioUrl = `${basePath}${capture.Path}`;
+	const transcript = useRadioTranscript(audioUrl, transcriptionAvailable === true);
 
 	const onEnded = () => {
 		setPlaying(false);
@@ -75,53 +65,6 @@ export default function RadioMessage({ driver, capture, basePath, gmtOffset, tra
 		});
 	};
 
-	useEffect(() => {
-		let cancelled = false;
-
-		if (transcriptionAvailable !== true) return;
-
-		enqueueTranscript(async () => {
-			if (cancelled) return;
-
-			setTranscript("Transcribing...");
-			setTranscriptError(null);
-
-			const response = await fetch("/api/radio-transcript", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ audioUrl }),
-			});
-
-			const data = (await response.json()) as { text?: string; error?: string; code?: string };
-
-			if (data.code === "TRANSCRIPTION_UNAVAILABLE") {
-				if (!cancelled) setTranscript("Transcript unavailable. Audio is available.");
-				return;
-			}
-
-			if (!response.ok) {
-				throw new Error(data.error ?? "Transcription failed.");
-			}
-
-			if (!cancelled) {
-				setTranscript(data.text?.trim() || "No speech detected.");
-			}
-		}).catch((error: unknown) => {
-			console.error(error);
-
-			if (!cancelled) {
-				const message = error instanceof Error ? error.message : "Transcript unavailable.";
-				setTranscriptError(message.includes("HF_TOKEN") ? "HF_TOKEN required for speaker diarization." : message);
-			}
-		});
-
-		return () => {
-			cancelled = true;
-		};
-	}, [audioUrl, transcriptionAvailable]);
-
 	const favoriteDriver = useSettingsStore((state) => state.favoriteDrivers.includes(driver.RacingNumber));
 
 	const localTime = utc(capture.Utc).local().format("HH:mm:ss");
@@ -154,7 +97,7 @@ export default function RadioMessage({ driver, capture, basePath, gmtOffset, tra
 						? "Checking transcript availability..."
 						: transcriptionAvailable === false
 							? "Transcript unavailable. Audio is available."
-							: (transcriptError ?? transcript)}
+							: transcript.text || "Queued for local transcription…"}
 				</p>
 
 				<audio preload="none" src={`${basePath}${capture.Path}`} ref={audioRef} onEnded={() => onEnded()} />

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useRadioTranscript } from "@/hooks/useRadioTranscript";
 import Icon from "./Icon";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
@@ -243,7 +244,7 @@ export function RadioPanel() {
 				<span className="live-count">{ordered.length}</span>
 			</header>
 			<div className="live-panel-scroll">
-				{ordered.map((capture) => {
+				{ordered.map((capture, index) => {
 					const driver = drivers?.[capture.RacingNumber];
 					if (!driver) return null;
 					return (
@@ -253,6 +254,7 @@ export function RadioPanel() {
 							driver={driver}
 							portrait={reference?.portraits[capture.RacingNumber] || driver.HeadshotUrl}
 							session={session || ""}
+							automatic={index < 5 && !!session}
 						/>
 					);
 				})}
@@ -266,15 +268,19 @@ function RadioCard({
 	driver,
 	portrait,
 	session,
+	automatic,
 }: {
 	capture: RadioCapture;
 	driver: Driver;
 	portrait?: string;
 	session: string;
+	automatic: boolean;
 }) {
 	const audioRef = useRef<HTMLAudioElement>(null);
 	const [playing, setPlaying] = useState(false);
 	const [error, setError] = useState("");
+	const audioUrl = "https://livetiming.formula1.com/static/" + session + capture.Path;
+	const transcript = useRadioTranscript(audioUrl, automatic);
 	const toggle = async () => {
 		if (!audioRef.current) return;
 		if (playing) {
@@ -315,6 +321,24 @@ function RadioCard({
 				<b>{driver.LastName || driver.Tla}</b>
 				<time>{timeLabel(capture.Utc)}</time>
 				{error && <small>{error}</small>}
+				<div
+					className="live-radio-transcript"
+					aria-live="polite"
+					aria-busy={transcript.phase === "loading" || transcript.phase === "queued"}
+				>
+					{transcript.phase === "ready" ? (
+						<p>{transcript.text}</p>
+					) : transcript.phase === "loading" || transcript.phase === "queued" ? (
+						<span>{transcript.text}</span>
+					) : (
+						<>
+							{transcript.phase === "error" && <span role="status">{transcript.text}</span>}
+							<button type="button" onClick={transcript.load} disabled={!session}>
+								{transcript.phase === "error" ? "Retry transcript" : "Transcribe"}
+							</button>
+						</>
+					)}
+				</div>
 			</div>
 			<button
 				className="live-radio-play"
@@ -323,12 +347,7 @@ function RadioCard({
 			>
 				<Icon name={playing ? "pause" : "play"} size={16} />
 			</button>
-			<audio
-				ref={audioRef}
-				preload="none"
-				src={"https://livetiming.formula1.com/static/" + session + capture.Path}
-				onEnded={() => setPlaying(false)}
-			/>
+			<audio ref={audioRef} preload="none" src={audioUrl} onEnded={() => setPlaying(false)} />
 		</article>
 	);
 }

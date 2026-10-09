@@ -51,3 +51,39 @@ Read-only source verification: `node tools/check-data-sources.cjs .cache/data-so
 The current geographic basemap uses MapLibre/OpenFreeMap. The reference uses Mapbox 3D tiles;
 a user's own public Mapbox token is needed for an identical basemap. This difference is not a completed 1:1 match.
 The live relay and historical REST API belong to the reference service; their underlying F1 ingestion is not established.
+
+## Local Team Radio transcripts and speakers
+
+Use Python 3.12 and install the complete local runtime once:
+
+```powershell
+py -3.12 -m venv .venv-whisper
+.\.venv-whisper\Scripts\python.exe -m pip install torch==2.8.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+.\.venv-whisper\Scripts\python.exe -m pip install -r tools/whisper-requirements.txt
+```
+
+On Linux/macOS, use python3 -m venv .venv-whisper and .venv-whisper/bin/python.
+If Python is elsewhere, set WHISPER_PYTHON to its executable in .env.local.
+Restart Next.js after changing environment settings.
+
+Recognition uses faster-whisper medium.en on CPU/int8. Acoustic speaker separation uses the public
+[SpeechBrain ECAPA-TDNN model](https://huggingface.co/speechbrain/spkrec-ecapa-voxceleb),
+with a pinned revision and Apache-2.0 license. Both run locally after the initial weight download.
+HF_TOKEN, pyannote, a paid service and a system FFmpeg installation are not required.
+Speaker separation is enabled by default; WHISPER_DIARIZE=0 disables it for diagnostics only.
+WHISPER_MAX_SPEAKERS defaults to 2 without forcing a second voice; WHISPER_SPEAKER_THRESHOLD
+controls cosine-distance clustering (default 0.4).
+
+The latest five Team Radio recordings are transcribed automatically; older cards have a Transcribe
+button. Failed jobs offer Retry transcript. Both client and server serialize jobs and reuse cached text.
+Audio playback remains available independently. Speaker 1/2 denote acoustic groups within one
+recording; they do not identify a driver or engineer. Speaker boundaries are approximate, and short,
+noisy or overlapping speech can be misclassified. Saved HF credentials are server-only and are
+excluded from the active recognition process.
+
+Status: GET /api/radio-transcript. Regression checks:
+
+```powershell
+node tools/test-radio-transcription.cjs
+.\.venv-whisper\Scripts\python.exe tools/test_radio_diarization.py
+```

@@ -28,6 +28,10 @@ const frameDisableHeaders = [
 const config: NextConfig = {
 	output,
 	compress,
+	// Python and model caches are local runtime dependencies, not Next.js bundle assets.
+	outputFileTracingExcludes: {
+		"/api/radio-transcript": ["./.venv-whisper/**/*", "./.cache/**/*"],
+	},
 	env: {
 		version: pack.version,
 	},

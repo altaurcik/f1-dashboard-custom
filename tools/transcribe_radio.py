@@ -79,6 +79,7 @@ def transcribe_segments(audio_path: Path, args: argparse.Namespace) -> list[dict
         beam_size=5,
         best_of=5,
         condition_on_previous_text=False,
+        word_timestamps=args.diarize,
     )
 
     result: list[dict] = []
@@ -93,6 +94,7 @@ def transcribe_segments(audio_path: Path, args: argparse.Namespace) -> list[dict
                 "start": float(segment.start),
                 "end": float(segment.end),
                 "text": text,
+                "words": [{"start": float(word.start), "end": float(word.end), "text": word.word} for word in (segment.words or [])],
             }
         )
 
@@ -112,136 +114,15 @@ def transcribe(audio_path: Path, args: argparse.Namespace) -> tuple[list[str], s
     return timestamped, " ".join(plain_parts).strip()
 
 
-def speaker_roles(segments: list[dict]) -> dict[str, str]:
-    roles: dict[str, str] = {}
-
-    for segment in segments:
-        speaker = segment.get("speaker")
-        if speaker and speaker not in roles:
-            roles[speaker] = f"speaker-{len(roles) + 1}"
-
-    return roles
-
-
-def speaker_label(roles: dict[str, str], speaker: str | None) -> str:
-    if not speaker:
-        return "unknown"
-
-    return roles.get(speaker, "unknown")
-
-
-def starts_engineer_reply(text: str) -> bool:
-    normalized = text.strip().lower()
-    return normalized.startswith(
-        (
-            "we ",
-            "we'll",
-            "we will",
-            "copy",
-            "ok ",
-            "okay",
-            "understood",
-            "confirm",
-            "stand by",
-            "box",
-            "mode",
-            "plan",
-        )
-    )
-
-
-def fallback_radio_turns(segments: list[dict]) -> list[tuple[str, str]]:
-    turns: list[tuple[str, str]] = []
-
-    for segment in segments:
-        text = segment.get("text", "").strip()
-        if not text:
-            continue
-
-        if turns and not starts_engineer_reply(text):
-            turns[-1] = ("fallback", f"{turns[-1][1]} {text}")
-        else:
-            turns.append(("fallback", text))
-
-    return turns
-
-
-def segment_overlap(start: float, end: float, other_start: float, other_end: float) -> float:
-    return max(0.0, min(end, other_end) - max(start, other_start))
-
-
-def assign_segment_speakers(segments: list[dict], diarize_segments) -> list[dict]:
-    rows = diarize_segments.to_dict("records")
-    assigned: list[dict] = []
-
-    for segment in segments:
-        best_speaker: str | None = None
-        best_overlap = 0.0
-
-        for row in rows:
-            overlap = segment_overlap(
-                float(segment["start"]),
-                float(segment["end"]),
-                float(row["start"]),
-                float(row["end"]),
-            )
-
-            if overlap > best_overlap:
-                best_overlap = overlap
-                best_speaker = row.get("speaker")
-
-        assigned.append({**segment, "speaker": best_speaker})
-
-    return assigned
-
-
 def transcribe_with_diarization(audio_path: Path, args: argparse.Namespace) -> tuple[list[str], str]:
-    token = args.hf_token or os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_TOKEN")
-    if not token:
-        raise RuntimeError(
-            "HF_TOKEN is required for pyannote/whisperX speaker diarization. "
-            "Create a Hugging Face token, accept the pyannote model terms, and export HF_TOKEN."
-        )
-
-    import whisperx
-    from whisperx.diarize import DiarizationPipeline
+    from faster_whisper.audio import decode_audio
+    from radio_diarization import separate_speakers
 
     speech_segments = transcribe_segments(audio_path, args)
-    audio = whisperx.load_audio(str(audio_path))
-    diarize_model = DiarizationPipeline(
-        token=token,
-        device=args.device,
-        cache_dir=str(Path(".cache/pyannote")),
-    )
-    diarize_segments = diarize_model(
-        audio,
-        num_speakers=args.num_speakers,
-        min_speakers=args.min_speakers,
-        max_speakers=args.max_speakers,
-    )
-
-    segments = assign_segment_speakers(speech_segments, diarize_segments)
-    roles = speaker_roles(segments)
-    timestamped: list[str] = []
-    turns: list[tuple[str, str]] = []
-
-    for segment in segments:
-        text = segment.get("text", "").strip()
-        if not text:
-            continue
-
-        role = speaker_label(roles, segment.get("speaker"))
-        timestamped.append(f"[{format_timestamp(segment['start'])} -> {format_timestamp(segment['end'])}] - {text}")
-
-        if turns and turns[-1][0] == role:
-            turns[-1] = (role, f"{turns[-1][1]} {text}")
-        else:
-            turns.append((role, text))
-
-    if len({role for role, _text in turns}) <= 1 and len(segments) > 1:
-        turns = fallback_radio_turns(segments)
-
-    plain_text = "\n".join(f"- {text}" for _role, text in turns)
+    words = [word for segment in speech_segments for word in segment["words"]]
+    turns = separate_speakers(decode_audio(str(audio_path)), words, args.device, args.speaker_threshold, args.max_speakers)
+    timestamped = [f"[{format_timestamp(turn['start'])} -> {format_timestamp(turn['end'])}] {turn['speaker']}: {turn['text']}" for turn in turns]
+    plain_text = "\n".join(f"{turn['speaker']}: {turn['text']}" for turn in turns)
     return timestamped, plain_text
 
 
@@ -256,19 +137,15 @@ def write_transcript(output_path: Path, timestamped: list[str], plain_text: str)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Transcribe a Team Radio audio file locally with faster-whisper/whisperX.")
+    parser = argparse.ArgumentParser(description="Transcribe a Team Radio audio file locally with faster-whisper and SpeechBrain.")
     parser.add_argument("audio", help="Path or URL to an audio file, for example .mp3")
     parser.add_argument("--output", type=Path, help="Transcript output path. Defaults to .transcript.txt next to input/cache.")
-    parser.add_argument("--model-name", default="base.en", help="Whisper model name or local model path.")
+    parser.add_argument("--model-name", default="medium.en", help="Whisper model name or local model path.")
     parser.add_argument("--device", default="cpu", help="faster-whisper device, for example cpu, cuda, auto.")
     parser.add_argument("--compute-type", default="int8", help="faster-whisper compute type, for example int8 or float32.")
-    parser.add_argument("--diarize", action="store_true", help="Use whisperX + pyannote speaker diarization.")
-    parser.add_argument("--hf-token", help="Hugging Face token for pyannote gated diarization models.")
-    parser.add_argument("--batch-size", type=int, default=8, help="whisperX transcription batch size.")
-    parser.add_argument("--chunk-size", type=int, default=30, help="whisperX transcription chunk size in seconds.")
-    parser.add_argument("--num-speakers", type=int, default=2, help="Exact number of speakers for diarization.")
-    parser.add_argument("--min-speakers", type=int, default=1, help="Minimum number of speakers for diarization.")
-    parser.add_argument("--max-speakers", type=int, default=2, help="Maximum number of speakers for diarization.")
+    parser.add_argument("--diarize", action="store_true", help="Separate acoustic voices locally with the public SpeechBrain ECAPA model (no token).")
+    parser.add_argument("--speaker-threshold", type=float, default=0.4, help="Cosine-distance threshold for acoustic speaker clustering.")
+    parser.add_argument("--max-speakers", type=int, default=2, help="Maximum acoustic voices; a second speaker is not forced.")
     parser.add_argument("--force", action="store_true", help="Overwrite an existing transcript.")
 
     args = parser.parse_args()

@@ -1712,6 +1712,7 @@
 	object-position: top;
 }
 .live-radio-card {
+	flex-shrink: 0;
 	display: flex;
 	align-items: center;
 	gap: 12px;
@@ -2365,4 +2366,39 @@
 }
 .live-timing .live-map-source.live-source-stale i {
 	background: #888;
+}
+
+/* Local radio recognition preserves the portrait/name/playback card layout. */
+.live-radio-transcript {
+	min-width: 0;
+	font-size: 11px;
+	line-height: 1.45;
+	color: var(--live-text, #cbd5e1);
+	overflow-wrap: anywhere;
+}
+.live-radio-transcript p {
+	margin: 2px 0 0;
+	white-space: pre-line;
+}
+.live-radio-transcript span {
+	display: block;
+	opacity: 0.75;
+}
+.live-radio-transcript button {
+	margin-top: 3px;
+	padding: 5px 8px;
+	border: 1px solid currentColor;
+	border-radius: 4px;
+	font-size: 11px;
+}
+.live-radio-transcript button:disabled {
+	opacity: 0.5;
+	cursor: wait;
+}
+.live-radio-transcript button:focus-visible {
+	outline: 2px solid #60a5fa;
+	outline-offset: 2px;
+}
+.live-theme-light .live-radio-transcript {
+	color: #334155;
 }
